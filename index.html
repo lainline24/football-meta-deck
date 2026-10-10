@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>해외축구 메타 리포트</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E⚽%3C/text%3E%3C/svg%3E">
+<meta name="description" content="네이버 스포츠 순위를 Firecrawl로 수집해 분석한 2026-27 해외축구 10개 대회 메타·트렌드 슬라이드">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --bg:#0d0f12; --card:#151a21; --line:#232a33; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+  --blue:#3987e5; --blue-soft:#9ec5f4; --red:#e66767; --gray:#5d5c57;
+  --font:"Pretendard Variable",Pretendard,"Malgun Gothic",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;overflow:hidden}
+body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+/* 1600x900 고정 캔버스를 화면에 맞춰 스케일 */
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:center;background:var(--bg);overflow:hidden}
+.slide{position:absolute;inset:0;padding:72px 96px;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility .45s}
+.slide.active{opacity:1;visibility:visible}
+.bgimg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0}
+.bgimg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(13,15,18,.96) 0%,rgba(13,15,18,.82) 42%,rgba(13,15,18,.35) 100%)}
+.slide>*:not(.bgimg):not(.foot){position:relative;z-index:1}
+.slide.center{display:flex;flex-direction:column;justify-content:center}
+.kicker{font-size:20px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:14px}
+h1{font-size:84px;line-height:1.08;font-weight:800;letter-spacing:-.02em}
+h2{font-size:50px;line-height:1.15;font-weight:800;letter-spacing:-.015em;margin-bottom:10px}
+.lead{font-size:24px;color:var(--ink2);line-height:1.55;max-width:1000px}
+.muted{color:var(--muted)}
+.foot{position:absolute;left:96px;right:96px;bottom:34px;display:flex;justify-content:space-between;font-size:15px;color:var(--muted);z-index:2}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px}
+.row{display:flex;gap:28px}
+.hl{color:var(--blue)} .hl-r{color:var(--red)}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(57,135,229,.16);color:var(--blue-soft);font-size:16px;font-weight:600}
+.takeaways{display:flex;flex-direction:column;gap:18px}
+.tk{padding:20px 24px}
+.tk b{display:block;font-size:22px;margin-bottom:6px}
+.tk span{font-size:18px;color:var(--ink2);line-height:1.5}
+video,img.chart{display:block;width:100%;border-radius:14px}
+/* 진행 표시 */
+#progress{position:absolute;left:0;bottom:0;height:4px;background:var(--blue);z-index:10;transition:width .4s ease}
+#counter{position:absolute;right:28px;bottom:14px;font-size:14px;color:var(--muted);z-index:10;font-variant-numeric:tabular-nums}
+#hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:13px;color:var(--muted);z-index:10;opacity:.8}
+
+/* S1 타이틀 */
+#s1 h1 .w{display:inline-block}
+#s1 .meta{display:flex;gap:14px;margin-top:34px}
+#s1 .bar{width:0;height:4px;background:var(--blue);margin:30px 0 26px;border-radius:2px}
+/* S2 파이프라인 */
+#pipe{position:relative;height:250px;margin-top:56px}
+#pipe svg{position:absolute;inset:0}
+.node{position:absolute;width:250px;padding:22px 22px 20px;opacity:0}
+.node .ic{font-size:30px;margin-bottom:10px}
+.node b{font-size:23px;display:block;margin-bottom:6px}
+.node span{font-size:16px;color:var(--ink2);line-height:1.5}
+/* S3 스탯 */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:56px}
+.tile{padding:34px 30px;opacity:0}
+.tile .v{font-size:80px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.tile .l{font-size:21px;margin-top:16px;font-weight:600}
+.tile .s{font-size:17px;color:var(--muted);margin-top:6px}
+/* 공통 차트 */
+svg text{font-family:var(--font)}
+.legend{display:flex;gap:22px;font-size:17px;color:var(--ink2);margin:8px 0 14px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+/* S12 빅매치 */
+.matches{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:26px}
+.match{padding:16px 26px 18px;opacity:0;background:rgba(21,26,33,.88);backdrop-filter:blur(4px)}
+.match .top{display:flex;justify-content:space-between;font-size:15px;color:var(--muted);margin-bottom:6px}
+.match .t{font-size:23px;font-weight:700;white-space:nowrap;text-align:center}
+.match .vs{color:var(--muted);font-weight:400;margin:0 16px;font-size:18px}
+/* S13 결론 */
+.concl{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.concl .card{padding:30px;opacity:0}
+.concl .n{font-size:48px;font-weight:800;color:var(--blue);line-height:1}
+.concl b{display:block;font-size:24px;margin:14px 0 10px}
+.concl p{font-size:18px;color:var(--ink2);line-height:1.6}
+.limits{margin-top:30px;padding:22px 28px;font-size:18px;color:var(--ink2);line-height:1.7}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1. 타이틀 -->
+<section class="slide" id="s1" data-title="타이틀">
+  <div class="bgimg" style="background-image:url(assets/img/stadium.jpg)"></div>
+  <div style="margin-top:150px">
+    <div class="kicker">Data Literacy · Vibe Coding</div>
+    <h1 id="t1"><span class="w">2026-27</span> <span class="w">해외축구</span><br><span class="w">메타</span> <span class="w hl">리포트</span></h1>
+    <div class="bar"></div>
+    <p class="lead" id="t1lead">10개 대회 · <span data-k="teams"></span>개 구단의 순위 데이터로 읽는 이번 시즌의 흐름</p>
+    <div class="meta"><span class="pill">네이버 스포츠</span><span class="pill">Firecrawl</span><span class="pill">pandas EDA</span></div>
+  </div>
+  <div class="foot"><span>수집 <span data-k="collected"></span></span><span>→ 키 또는 클릭으로 넘기기</span></div>
+</section>
+
+<!-- 2. 데이터 & 방법 -->
+<section class="slide center" id="s2" data-title="데이터와 방법">
+  <div class="bgimg" style="background-image:url(assets/img/analytics.jpg);opacity:.55"></div>
+  <div class="kicker">How</div>
+  <h2>크롤링부터 분석까지, 4단계 파이프라인</h2>
+  <p class="lead">웹페이지 → 표 → 지표 → 이야기. 같은 스크립트를 다시 돌리면 최신 순위로 전부 갱신됩니다.</p>
+  <div id="pipe">
+    <svg viewBox="0 0 1408 250"><path id="pipePath" d="M250 100 L 386 100 M636 100 L 772 100 M1022 100 L 1158 100" fill="none" stroke="#3987e5" stroke-width="3" stroke-linecap="round"/></svg>
+    <div class="node card" style="left:0;top:10px"><div class="ic">🌐</div><b>네이버 스포츠</b><span>리그별 팀 순위 페이지<br>10개 대회 · 리그 코드로 접근</span></div>
+    <div class="node card" style="left:386px;top:10px"><div class="ic">🔥</div><b>Firecrawl</b><span>JS 렌더링 후 마크다운 추출<br>분당 요청 제한 → 자동 재시도</span></div>
+    <div class="node card" style="left:772px;top:10px"><div class="ic">📊</div><b>Excel</b><span>리그별 시트 + 요약 시트<br>승점 = 3×승+무 검증 통과</span></div>
+    <div class="node card" style="left:1158px;top:10px"><div class="ic">🔍</div><b>pandas EDA</b><span>경기당 골·무승부율·모멘텀<br>유럽대항전 소속 리그 매핑</span></div>
+  </div>
+  <div class="foot"><span>이미지: Google Flow 생성</span><span></span></div>
+</section>
+
+<!-- 3. 숫자 -->
+<section class="slide center" id="s3" data-title="숫자로 보는 시즌">
+  <div class="kicker">At a glance</div>
+  <h2>숫자 4개로 보는 이번 시즌</h2>
+  <div class="tiles">
+    <div class="tile card"><div class="v" data-count="domestic">0</div><div class="l">분석한 리그 구단</div><div class="s">8개 리그 + 유럽대항전 <span data-k="europe"></span>팀</div></div>
+    <div class="tile card"><div class="v hl" data-count="topGpg" data-dec="2">0</div><div class="l">최다 경기당 골</div><div class="s" data-k="topGpgName"></div></div>
+    <div class="tile card"><div class="v" data-count="topDraw" data-suffix="%">0</div><div class="l">최고 무승부율</div><div class="s" data-k="topDrawName"></div></div>
+    <div class="tile card"><div class="v hl" data-k="eplRec">0</div><div class="l">유럽대항전 최고 성적</div><div class="s" data-k="eplRecName"></div></div>
+  </div>
+  <p class="lead" style="margin-top:44px">이 네 숫자가 오늘 이야기의 뼈대입니다. <b style="color:var(--ink)">가장 빡빡한 리그가 유럽에서는 가장 강하다</b>는 역설이 핵심입니다.</p>
+</section>
+
+<!-- 4. 경기당 골 (manim) -->
+<section class="slide" id="s4" data-title="경기당 골 순위">
+  <div class="kicker">Goals</div>
+  <h2>독일·네덜란드는 화끈하고, 잉글랜드는 빡빡하다</h2>
+  <div class="row" style="margin-top:26px;align-items:flex-start">
+    <div style="flex:0 0 940px"><video src="assets/video/GoalsRace.mp4" muted playsinline preload="auto"></video></div>
+    <div class="takeaways" style="flex:1">
+      <div class="tk card"><b>1골 차이</b><span>최고(<span data-k="topGpgName"></span>)와 최저(<span data-k="lowGpgName"></span>) 리그의 경기당 골 차이는 약 1골</span></div>
+      <div class="tk card"><b>상위 2개 리그 ≈ 3.8골</b><span>분데스리가·에레디비시는 거의 매 경기 4골 가까이 나옵니다</span></div>
+      <div class="tk card"><b>세리에 A·리그 1·EPL은 2.8~2.9골</b><span>유럽 5대 리그 중 3곳이 최하위권에 몰려 있습니다</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>manim으로 렌더링한 데이터 모션</span><span></span></div>
+</section>
+
+<!-- 5. 리그 성격 지도 (anime.js) -->
+<section class="slide" id="s5" data-title="리그 성격 지도">
+  <div class="kicker">League map</div>
+  <h2>골이 많을수록 승부도 잘 갈릴까?</h2>
+  <p class="lead">가로축 경기당 골, 세로축 무승부율. 가운데 십자선은 8개 리그의 중앙값입니다.</p>
+  <div class="card" style="margin-top:22px;padding:18px 24px"><svg id="mapSvg" viewBox="0 0 1360 520"></svg></div>
+</section>
+
+<!-- 6. 리그 DNA (matplotlib) -->
+<section class="slide" id="s6" data-title="리그 DNA">
+  <div class="kicker">League DNA</div>
+  <h2>지표 5개로 비교한 리그별 특징</h2>
+  <div class="row" style="margin-top:22px;align-items:flex-start">
+    <div class="card" style="flex:0 0 1000px;padding:10px"><img class="chart" src="assets/charts/league_dna.png" alt="리그별 경기당 골, 무승부율, 격차, 무패 팀, 평균 경기 수 히트맵"></div>
+    <div class="takeaways" style="flex:1">
+      <div class="tk card"><b>세리에 A = 양극화</b><span>무승부율 최저, 격차 최대. 이긴 팀과 진 팀이 확실히 갈립니다</span></div>
+      <div class="tk card"><b>EPL = 물고 물리는 리그</b><span>무승부율 최고, 무패 팀 5개로 최다</span></div>
+      <div class="tk card"><b>MLS = 평준화</b><span>27경기를 치렀는데도 격차가 가장 작습니다</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>색이 밝을수록 해당 지표가 리그들 중 높음 · matplotlib</span><span></span></div>
+</section>
+
+<!-- 7. EPL 패러독스 (manim) -->
+<section class="slide" id="s7" data-title="EPL 패러독스">
+  <div class="bgimg" style="background-image:url(assets/img/ball.jpg);opacity:.5"></div>
+  <div class="kicker">Paradox</div>
+  <h2>프리미어리그의 두 얼굴</h2>
+  <div class="row" style="margin-top:24px;align-items:center">
+    <div class="card" style="flex:0 0 1000px;overflow:hidden"><video src="assets/video/EPLParadox.mp4" muted playsinline preload="auto"></video></div>
+    <p class="lead" style="flex:1;font-size:22px">국내에서는 실력이 비슷해 <b style="color:var(--ink)">서로 비기지만</b>, 그 리그의 팀들이 유럽에 나가면 <b class="hl">한 경기도 지지 않았습니다.</b><br><br><span class="muted" style="font-size:18px">리그 전체의 수준이 함께 올라간 상향 평준화로 읽을 수 있습니다.</span></p>
+  </div>
+</section>
+
+<!-- 8. 유럽대항전 (anime.js) -->
+<section class="slide" id="s8" data-title="유럽대항전 성적">
+  <div class="kicker">Europe</div>
+  <h2>유럽대항전 1라운드, 소속 리그별 성적</h2>
+  <p class="lead">챔피언스리그 + 유로파리그 72개 팀의 결과를 소속 국내 리그별로 합산했습니다.</p>
+  <div class="legend"><span><i class="sw" style="background:var(--blue)"></i>승</span><span><i class="sw" style="background:var(--gray)"></i>무</span><span><i class="sw" style="background:var(--red)"></i>패</span></div>
+  <div class="card" style="padding:18px 24px"><svg id="euSvg" viewBox="0 0 1360 440"></svg></div>
+  <div class="foot"><span>기타 리그: 포르투갈·튀르키예·벨기에 등 수집 대상이 아닌 리그</span><span></span></div>
+</section>
+
+<!-- 9. 공격 vs 수비 (matplotlib) -->
+<section class="slide" id="s9" data-title="공격 vs 수비">
+  <div class="kicker">Attack × Defense</div>
+  <h2>선두가 되는 두 가지 길: 화력이냐 철벽이냐</h2>
+  <div class="row" style="margin-top:20px;align-items:flex-start">
+    <div class="card" style="flex:0 0 1040px;padding:10px"><img class="chart" src="assets/charts/attack_defense.png" alt="168개 구단의 경기당 득점과 실점 산점도"></div>
+    <div class="takeaways" style="flex:1">
+      <div class="tk card"><b class="hl">바르셀로나</b><span>경기당 4.43골. 혼자 차트 오른쪽 끝에 있는 압도적 화력</span></div>
+      <div class="tk card"><b>로마 · 모나코</b><span>경기당 실점 0.6. 수비로 1위를 지키는 팀</span></div>
+      <div class="tk card"><b>공통점</b><span>모든 선두가 실점 중앙값보다 위(덜 먹음)에 있습니다</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 승리 공식 (matplotlib) -->
+<section class="slide" id="s10" data-title="승리 공식">
+  <div class="kicker">Correlation</div>
+  <h2>승점을 결정하는 건 공격일까, 수비일까?</h2>
+  <div class="card" style="margin-top:20px;padding:10px"><img class="chart" src="assets/charts/correlation.png" alt="경기당 득점·실점과 경기당 승점의 상관관계"></div>
+  <p class="lead" style="margin-top:20px">상관계수 <b class="hl" data-k="rgf"></b> vs <b class="hl-r" data-k="rga"></b>. 한 골을 더 넣는 것과 한 골을 덜 먹는 것의 가치가 거의 같습니다.</p>
+</section>
+
+<!-- 11. 모멘텀 (anime.js) -->
+<section class="slide" id="s11" data-title="모멘텀">
+  <div class="bgimg" style="background-image:url(assets/img/sprint.jpg);opacity:.35"></div>
+  <div class="kicker">Momentum</div>
+  <h2>지금 가장 뜨거운 팀과 차가운 팀</h2>
+  <p class="lead">최근 5경기 경기당 승점에서 시즌 경기당 승점을 뺀 값입니다. 7경기 이상 치른 팀만 비교했습니다.</p>
+  <div class="card" style="margin-top:18px;padding:16px 24px;background:rgba(21,26,33,.9)"><svg id="momSvg" viewBox="0 0 1360 500"></svg></div>
+</section>
+
+<!-- 12. 빅매치 -->
+<section class="slide" id="s12" data-title="다음 라운드 빅매치">
+  <div class="bgimg" style="background-image:url(assets/img/tunnel.jpg)"></div>
+  <div class="kicker">Next up</div>
+  <h2>다음 라운드 상위권 맞대결</h2>
+  <p class="lead">4위 이내 팀이 6위 이내 팀을 만나는 경기입니다. 순위표가 크게 흔들릴 수 있는 경기들이에요.</p>
+  <div class="matches" id="matches"></div>
+  <div class="foot"><span>이미지: Google Flow 생성</span><span></span></div>
+</section>
+
+<!-- 13. 결론 -->
+<section class="slide center" id="s13" data-title="결론과 한계">
+  <div class="kicker">Takeaways</div>
+  <h2>정리하면</h2>
+  <div class="concl">
+    <div class="card"><div class="n">01</div><b>리그마다 성격이 다르다</b><p>독일·네덜란드는 골이 많고, 이탈리아는 승부가 확실히 갈리며, 잉글랜드는 비기는 경기가 많습니다.</p></div>
+    <div class="card"><div class="n">02</div><b>빡빡한 EPL이 유럽 최강</b><p>국내 무승부율 1위 리그가 유럽대항전에서는 8전 8승. 상향 평준화의 신호입니다.</p></div>
+    <div class="card"><div class="n">03</div><b>공격 = 수비</b><p>득점과 실점이 승점에 주는 영향이 거의 같습니다. 선두들은 모두 실점이 적습니다.</p></div>
+  </div>
+  <div class="limits card"><b style="color:var(--ink)">해석할 때 주의할 점</b> · 대부분 리그가 4~8경기만 치러 표본이 작습니다. 유럽대항전은 1경기 결과입니다. 수치보다 <b style="color:var(--ink)">방향</b>을 보세요.<br>
+  <span class="muted">데이터: 네이버 스포츠 (Firecrawl 수집 <span data-k="collected"></span>) · 이미지: Google Flow (Nano Banana 2.1) · 시각화: anime.js · manim · matplotlib</span></div>
+</section>
+
+<div id="progress"></div><div id="counter"></div><div id="hint">← → 키 · 스페이스 · 클릭 · F 전체화면</div>
+</div>
+
+<script src="assets/vendor/anime.min.js"></script>
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a = {}, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const C = { ink: "#ffffff", ink2: "#c3c2b7", muted: "#898781", line: "#232a33", axis: "#383f49", blue: "#3987e5", red: "#e66767", gray: "#5d5c57", card: "#151a21" };
+const slides = [...document.querySelectorAll(".slide")];
+let cur = -1, D = null;
+
+/* ---------- 스케일 ---------- */
+function fit() { const s = Math.min(innerWidth / 1600, innerHeight / 900); document.getElementById("stage").style.transform = `translate(-50%,-50%) scale(${s})`; }
+addEventListener("resize", fit); fit();
+
+/* ---------- 데이터 바인딩 ---------- */
+function bind() {
+  const m = D.meta, top = m[0], low = m[m.length - 1], draw = [...m].sort((a, b) => b.draw - a.draw)[0];
+  const eu = D.europe.filter(e => e.league !== "기타 리그")[0];
+  const K = {
+    teams: D.counts.domestic + D.counts.europe, collected: D.collected, europe: D.counts.europe,
+    topGpgName: top.league, lowGpgName: low.league, topDrawName: draw.league,
+    eplRec: `${eu.w}-${eu.d}-${eu.l}`, eplRecName: `${eu.league} (${eu.n}팀)`,
+    rgf: (D.corr.gf > 0 ? "+" : "") + D.corr.gf.toFixed(2), rga: D.corr.ga.toFixed(2),
+  };
+  D._count = { domestic: D.counts.domestic, topGpg: top.gpg, topDraw: Math.round(draw.draw * 100) };
+  document.querySelectorAll("[data-k]").forEach(n => { if (K[n.dataset.k] !== undefined) n.textContent = K[n.dataset.k]; });
+}
+
+/* ---------- 차트 빌더 ---------- */
+function buildMap() {
+  const svg = document.getElementById("mapSvg"), W = 1360, H = 520, m = { l: 70, r: 40, t: 20, b: 56 };
+  const xs = D.meta.map(d => d.gpg), ys = D.meta.map(d => d.draw);
+  const x0 = Math.floor((Math.min(...xs) - .15) * 10) / 10, x1 = Math.ceil((Math.max(...xs) + .15) * 10) / 10;
+  const y0 = Math.floor((Math.min(...ys) - .03) * 20) / 20, y1 = Math.ceil((Math.max(...ys) + .03) * 20) / 20;
+  const X = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r), Y = v => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+  for (let t = y0; t <= y1 + 1e-9; t += .05) { el("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: C.line }, svg); el("text", { x: m.l - 12, y: Y(t) + 6, "text-anchor": "end", fill: C.muted, "font-size": 17 }, svg).textContent = Math.round(t * 100) + "%"; }
+  for (let t = Math.ceil(x0 * 2) / 2; t <= x1; t += .5) el("text", { x: X(t), y: H - m.b + 30, "text-anchor": "middle", fill: C.muted, "font-size": 17 }, svg).textContent = t.toFixed(1);
+  const med = a => { const s = [...a].sort((p, q) => p - q), k = s.length / 2; return s.length % 2 ? s[Math.floor(k)] : (s[k - 1] + s[k]) / 2; };
+  el("line", { x1: X(med(xs)), x2: X(med(xs)), y1: m.t, y2: H - m.b, stroke: C.axis, "stroke-width": 1.5, class: "medline" }, svg);
+  el("line", { x1: m.l, x2: W - m.r, y1: Y(med(ys)), y2: Y(med(ys)), stroke: C.axis, "stroke-width": 1.5, class: "medline" }, svg);
+  [["골 적고 · 무승부 많음", m.l + 14, m.t + 24, "start"], ["골 많고 · 무승부 많음", W - m.r - 14, m.t + 24, "end"],
+   ["골 적고 · 승부 갈림", m.l + 14, H - m.b - 14, "start"], ["골 많고 · 승부 갈림", W - m.r - 14, H - m.b - 14, "end"]]
+    .forEach(([t, x, y, a]) => el("text", { x, y, "text-anchor": a, fill: C.muted, "font-size": 17, class: "quad" }, svg).textContent = t);
+  el("text", { x: W - m.r, y: H - 6, "text-anchor": "end", fill: C.ink2, "font-size": 17 }, svg).textContent = "경기당 골 →";
+  const placed = [];
+  [...D.meta].sort((a, b) => b.draw - a.draw).forEach(d => {
+    const cx = X(d.gpg), cy = Y(d.draw), hot = d.league === "프리미어리그" || d.league === "분데스리가" || d.league === "세리에 A";
+    const g = el("g", { class: "mapdot", "data-cx": cx, "data-cy": cy }, svg);
+    el("circle", { cx, cy, r: 11, fill: hot ? C.blue : C.ink2, stroke: C.card, "stroke-width": 3 }, g);
+    const left = cx > W - 260, lw = d.league.length * 19 + 8; let ly = cy + 7; const lx = left ? cx - 20 - lw : cx + 20;
+    while (placed.some(p => lx < p.x + p.w && p.x < lx + lw && Math.abs(p.y - ly) < 26)) ly += 26;
+    placed.push({ x: lx, y: ly, w: lw });
+    el("text", { x: left ? cx - 20 : cx + 20, y: ly, "text-anchor": left ? "end" : "start", fill: C.ink, "font-size": 20, "font-weight": 600 }, g).textContent = d.league;
+  });
+}
+
+function buildEurope() {
+  const svg = document.getElementById("euSvg"), rows = D.europe, W = 1360, rowH = 60, m = { l: 160, r: 220 };
+  const max = Math.max(...rows.map(r => r.n)), X = v => v / max * (W - m.l - m.r);
+  rows.forEach((r, i) => {
+    const y = i * rowH + 10, h = rowH - 22;
+    el("text", { x: m.l - 16, y: y + h / 2 + 7, "text-anchor": "end", fill: r.league === "기타 리그" ? C.muted : C.ink, "font-size": 20, "font-weight": 600 }, svg).textContent = r.league;
+    let x = m.l;
+    [["w", C.blue], ["d", C.gray], ["l", C.red]].forEach(([k, c]) => {
+      if (!r[k]) return; const w = X(r[k]);
+      const rect = el("rect", { x: x + 1, y, width: Math.max(w - 2, 2), height: h, rx: 5, fill: c, class: "eubar", "data-w": Math.max(w - 2, 2) }, svg);
+      rect.setAttribute("width", 0);
+      if (w > 30) el("text", { x: x + w / 2, y: y + h / 2 + 7, "text-anchor": "middle", fill: "#fff", "font-size": 18, "font-weight": 700, class: "eulbl", opacity: 0 }, svg).textContent = r[k];
+      x += w;
+    });
+    el("text", { x: x + 14, y: y + h / 2 + 7, fill: C.ink2, "font-size": 18, class: "eulbl", opacity: 0 }, svg).textContent = `승률 ${Math.round(r.w / r.n * 100)}% · ${r.gf}:${r.ga}`;
+  });
+}
+
+function buildMomentum() {
+  const svg = document.getElementById("momSvg"), rows = [...D.momentum].sort((a, b) => b.mom - a.mom);
+  const W = 1360, rowH = 40, m = { l: 330, r: 300 }, mx = Math.max(...rows.map(r => Math.abs(r.mom)));
+  const cx = m.l + (W - m.l - m.r) / 2, half = (W - m.l - m.r) / 2 - 64, X = v => v / mx * half;
+  el("line", { x1: cx, x2: cx, y1: 0, y2: rows.length * rowH + 8, stroke: C.axis, "stroke-width": 2 }, svg);
+  rows.forEach((r, i) => {
+    const y = i * rowH + 8, h = rowH - 14, w = X(r.mom), pos = w >= 0;
+    el("text", { x: m.l - 18, y: y + h / 2 + 7, "text-anchor": "end", fill: C.ink, "font-size": 19, "font-weight": 600 }, svg).textContent = r.team;
+    el("text", { x: m.l - 18 - (r.team.length * 19 + 12), y: y + h / 2 + 7, "text-anchor": "end", fill: C.muted, "font-size": 15 }, svg).textContent = r.league.replace("메이저리그사커", "MLS").replace("잉글랜드 챔피언십", "챔피언십");
+    const rect = el("rect", { x: cx, y, width: 0, height: h, rx: 4, fill: pos ? C.blue : C.red, class: "mombar", "data-w": Math.abs(w), "data-pos": pos ? 1 : 0 }, svg);
+    el("text", { x: pos ? cx + w + 10 : cx + w - 10, y: y + h / 2 + 7, "text-anchor": pos ? "start" : "end", fill: C.ink2, "font-size": 17, class: "momlbl", opacity: 0 }, svg).textContent = (r.mom > 0 ? "+" : "") + r.mom.toFixed(2);
+    // 최근 5경기 칩 (왼쪽이 과거)
+    [...r.recent].forEach((c, j) => {
+      const col = c === "승" ? C.blue : c === "무" ? C.gray : C.red;
+      el("rect", { x: W - m.r + 40 + j * 34, y: y + 1, width: 28, height: h - 2, rx: 6, fill: col, class: "chip", opacity: 0 }, svg);
+      el("text", { x: W - m.r + 54 + j * 34, y: y + h / 2 + 6, "text-anchor": "middle", fill: "#fff", "font-size": 15, "font-weight": 700, class: "chip", opacity: 0 }, svg).textContent = c;
+    });
+    el("text", { x: W - 4, y: y + h / 2 + 6, "text-anchor": "end", fill: C.muted, "font-size": 15 }, svg).textContent = r.rank + "위";
+  });
+}
+
+function buildMatches() {
+  document.getElementById("matches").innerHTML = D.bigs.map(b =>
+    `<div class="match card"><div class="top"><span>${b.league.replace("메이저리그사커", "MLS")}</span><span>승점차 ${b.gap}</span></div><div class="t">${b.a}<span class="vs">vs</span>${b.b}</div></div>`).join("");
+}
+
+/* ---------- 슬라이드 진입 애니메이션 ---------- */
+const enter = {
+  s1() {
+    anime.timeline({ easing: "easeOutExpo" })
+      .add({ targets: "#s1 .kicker", opacity: [0, 1], translateY: [20, 0], duration: 700 })
+      .add({ targets: "#s1 h1 .w", opacity: [0, 1], translateY: [60, 0], rotate: [4, 0], delay: anime.stagger(110), duration: 1100 }, "-=400")
+      .add({ targets: "#s1 .bar", width: [0, 220], duration: 900 }, "-=700")
+      .add({ targets: ["#s1 .lead", "#s1 .pill"], opacity: [0, 1], translateY: [16, 0], delay: anime.stagger(80), duration: 800 }, "-=600");
+    anime({ targets: "#s1 .bgimg", scale: [1.12, 1], duration: 6000, easing: "easeOutQuad" });
+  },
+  s2() {
+    const p = document.getElementById("pipePath"), len = p.getTotalLength();
+    anime.set(p, { strokeDasharray: len, strokeDashoffset: len });
+    anime.timeline({ easing: "easeOutExpo" })
+      .add({ targets: "#s2 .node", opacity: [0, 1], translateY: [40, 0], scale: [.92, 1], delay: anime.stagger(260), duration: 900 })
+      .add({ targets: p, strokeDashoffset: [len, 0], duration: 1400, easing: "easeInOutSine" }, 200);
+  },
+  s3() {
+    anime({ targets: "#s3 .tile", opacity: [0, 1], translateY: [50, 0], delay: anime.stagger(140), duration: 900, easing: "easeOutExpo" });
+    document.querySelectorAll("#s3 [data-count]").forEach(n => {
+      const target = D._count[n.dataset.count], dec = +(n.dataset.dec || 0), suf = n.dataset.suffix || "", o = { v: 0 };
+      anime({ targets: o, v: target, duration: 1800, delay: 300, easing: "easeOutCubic", update: () => n.textContent = o.v.toFixed(dec) + suf });
+    });
+  },
+  s5() {
+    document.querySelectorAll("#mapSvg .mapdot").forEach((g, i) => {
+      anime({ targets: g, opacity: [0, 1], translateX: [-(+g.dataset.cx) * .5, 0], translateY: [260 - (+g.dataset.cy), 0], duration: 1200, delay: 150 + i * 120, easing: "easeOutBack" });
+    });
+    anime({ targets: ["#mapSvg .medline", "#mapSvg .quad"], opacity: [0, 1], duration: 800, delay: 1300, easing: "linear" });
+  },
+  s8() {
+    const bars = document.querySelectorAll("#euSvg .eubar");
+    anime({ targets: bars, width: el => el.dataset.w, duration: 900, delay: anime.stagger(70), easing: "easeOutExpo" });
+    anime({ targets: "#euSvg .eulbl", opacity: [0, 1], duration: 500, delay: anime.stagger(40, { start: 700 }), easing: "linear" });
+  },
+  s11() {
+    const bars = [...document.querySelectorAll("#momSvg .mombar")];
+    bars.forEach(b => { b.setAttribute("width", 0); b.setAttribute("x", b.closest("svg").querySelector("line").getAttribute("x1")); });
+    const cx = +document.querySelector("#momSvg line").getAttribute("x1");
+    anime({ targets: bars, width: b => b.dataset.w, x: b => b.dataset.pos === "1" ? cx : cx - b.dataset.w, duration: 1000, delay: anime.stagger(70), easing: "easeOutExpo" });
+    anime({ targets: "#momSvg .momlbl", opacity: [0, 1], duration: 400, delay: anime.stagger(70, { start: 700 }), easing: "linear" });
+    anime({ targets: "#momSvg .chip", opacity: [0, 1], scale: [.6, 1], duration: 400, delay: anime.stagger(12, { start: 900 }), easing: "easeOutBack" });
+  },
+  s12() {
+    anime({ targets: "#s12 .match", opacity: [0, 1], translateX: (e, i) => [i % 2 ? 60 : -60, 0], delay: anime.stagger(110), duration: 900, easing: "easeOutExpo" });
+  },
+  s13() {
+    anime({ targets: "#s13 .concl .card", opacity: [0, 1], translateY: [40, 0], delay: anime.stagger(160), duration: 900, easing: "easeOutExpo" });
+  },
+};
+/* 공통: 제목류 페이드업 */
+function enterCommon(s) {
+  if (s.id === "s1") return;
+  anime({ targets: s.querySelectorAll(".kicker, h2, .lead, .legend"), opacity: [0, 1], translateY: [18, 0], delay: anime.stagger(70), duration: 700, easing: "easeOutExpo" });
+  anime({ targets: s.querySelectorAll(".tk"), opacity: [0, 1], translateX: [40, 0], delay: anime.stagger(140, { start: 500 }), duration: 800, easing: "easeOutExpo" });
+}
+
+function go(n) {
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  if (n === cur) return;
+  slides.forEach((s, i) => s.classList.toggle("active", i === n));
+  const s = slides[n]; cur = n;
+  s.querySelectorAll("video").forEach(v => { v.currentTime = 0; v.play().catch(() => {}); });
+  slides.forEach((o, i) => { if (i !== n) o.querySelectorAll("video").forEach(v => v.pause()); });
+  enterCommon(s); enter[s.id] && enter[s.id]();
+  document.getElementById("progress").style.width = ((n + 1) / slides.length * 100) + "%";
+  document.getElementById("counter").textContent = `${n + 1} / ${slides.length}`;
+  history.replaceState(null, "", "#" + (n + 1));
+}
+addEventListener("keydown", e => {
+  if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+  else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+  else if (e.key === "Home") go(0); else if (e.key === "End") go(slides.length - 1);
+  else if (e.key.toLowerCase() === "f") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+});
+addEventListener("click", e => { if (e.target.closest("a,button")) return; go(e.clientX > innerWidth / 3 ? cur + 1 : cur - 1); });
+let tx = null; addEventListener("touchstart", e => tx = e.touches[0].clientX);
+addEventListener("touchend", e => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1)); tx = null; });
+
+fetch("data.json").then(r => r.json()).then(d => {
+  D = d; bind(); buildMap(); buildEurope(); buildMomentum(); buildMatches();
+  const h = parseInt(location.hash.slice(1)); go(isNaN(h) ? 0 : h - 1);
+  window.__deck = { go, count: slides.length, ready: true };
+});
+</script>
+</body>
+</html>
