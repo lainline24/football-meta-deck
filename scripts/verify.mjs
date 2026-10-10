@@ -18,7 +18,8 @@ await page.setViewport({ width: 1600, height: 900 });
 const problems = [];
 page.on("console", m => { if (m.type() === "error") problems.push(`[console] ${m.text()}`); });
 page.on("pageerror", e => problems.push(`[pageerror] ${e.message}`));
-page.on("requestfailed", r => problems.push(`[requestfailed] ${r.url()} ${r.failure()?.errorText}`));
+// 영상의 ERR_ABORTED는 Chrome이 미리받기 요청을 끊고 range 요청으로 바꿀 때 생기는 정상 동작 → 제외 (재생 여부는 슬라이드별 검사가 확인)
+page.on("requestfailed", r => { const err = r.failure()?.errorText || ""; if (/\.mp4(\?|$)/.test(r.url()) && err === "net::ERR_ABORTED") return; problems.push(`[requestfailed] ${r.url()} ${err}`); });
 page.on("response", r => { if (r.status() >= 400) problems.push(`[http ${r.status()}] ${r.url()}`); });
 
 await page.goto(URL, { waitUntil: "networkidle0", timeout: 60000 });
