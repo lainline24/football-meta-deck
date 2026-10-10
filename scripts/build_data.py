@@ -1,4 +1,4 @@
-"""EDA 결과를 덱용 data.json으로 내보내기 (eda_league.py의 분석 함수 재사용)"""
+"""EDA + 전술 분석 결과를 덱용 data.json으로 내보내기 (eda_league.py, tactics.py 재사용)"""
 import json
 import os
 import sys
@@ -6,7 +6,9 @@ from datetime import datetime
 
 DECK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(DECK))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import eda_league as eda  # noqa: E402
+import tactics  # noqa: E402  (같은 scripts 폴더)
 
 
 def main():
@@ -35,10 +37,13 @@ def main():
                  .rename(columns={"리그": "league", "구단": "team", "순위": "rank", "그룹": "group", "경기": "games", "승점": "pts"})
                  .round(3).to_dict("records"),
     }
+    data["tactics"] = tactics.build(dom)
+    if data["tactics"]["unmatched"]:
+        print("⚠ 순위표와 이름이 안 맞는 구단:", data["tactics"]["unmatched"])
     out = os.path.join(DECK, "data.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
-    print("data.json 저장:", out, "| 국내", len(dom), "팀 / 유럽", len(eu), "팀")
+    print("data.json 저장:", out, "| 국내", len(dom), "팀 / 유럽", len(eu), "팀 / 전술 분석", data["tactics"]["n"], "팀")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
 """manim 데이터 모션 영상 (Python 3.12 venv에서 실행)
-    manim -qh --format mp4 scripts/scenes.py GoalsRace EPLParadox
+    manim -qh --format mp4 scripts/scenes.py GoalsRace EPLParadox PossessionPoints
 """
 import json
 import os
+
+import numpy as np
 
 from manim import (PI, TAU, Arc, always_redraw, DOWN, LEFT, RIGHT, UP, Circle, Create, FadeIn, FadeOut, GrowFromEdge, Indicate, Line,
                    LaggedStart, Rectangle, Scene, Text, Transform, ValueTracker, VGroup, Write, config, linear, smooth)
@@ -10,10 +12,10 @@ from manim import (PI, TAU, Arc, always_redraw, DOWN, LEFT, RIGHT, UP, Circle, C
 DECK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 D = json.load(open(os.path.join(DECK, "data.json"), encoding="utf-8"))
 
-config.background_color = "#151a21"  # index.html --card
+config.background_color = "#121b2b"  # index.html --card (테마 v2)
 FONT = "Malgun Gothic"
-INK, INK2, MUTED, GRID = "#ffffff", "#c3c2b7", "#898781", "#2c333d"
-BLUE, RED, GRAY = "#3987e5", "#e66767", "#5d5c57"
+INK, INK2, MUTED, GRID = "#ffffff", "#cbd5e1", "#8b97ab", "#24324d"
+BLUE, RED, GRAY, AMBER, MINT = "#4090ff", "#f05252", "#3a4558", "#ffc94d", "#0fae7e"
 
 
 def T(s, size=28, color=INK2, weight="NORMAL"):  # 한글 텍스트 (LaTeX 없이 Pango 렌더링)
@@ -105,3 +107,54 @@ class EPLParadox(Scene):
         punch = T("안에서는 비기고, 밖에서는 이긴다", 34, INK, "BOLD").to_edge(DOWN, buff=0.45)
         self.play(Write(punch), run_time=1.0)
         self.wait(1.8)
+
+
+class PossessionPoints(Scene):
+    """점유율이 높으면 승점도 높을까? — 168개 구단 산점도 + 회귀선 + 상관계수"""
+
+    def construct(self):
+        teams = D["tactics"]["teams"]
+        r = D["tactics"]["corr"]["poss"]
+        x0, x1, y0, y1 = 25, 75, 0, 3
+        L, R, B, Tp = -6.0, 6.2, -3.0, 2.6
+        X = lambda v: L + (v - x0) / (x1 - x0) * (R - L)
+        Y = lambda v: B + (v - y0) / (y1 - y0) * (Tp - B)
+
+        grid = VGroup()
+        for v in range(30, 76, 10):
+            grid.add(Line([X(v), B, 0], [X(v), Tp, 0], color=GRID, stroke_width=1.5))
+            grid.add(T(f"{v}%", 22, MUTED).move_to([X(v), B - 0.35, 0]))
+        for v in [0, 1, 2, 3]:
+            grid.add(Line([L, Y(v), 0], [R, Y(v), 0], color=GRID, stroke_width=1.5))
+            grid.add(T(str(v), 22, MUTED).move_to([L - 0.35, Y(v), 0]))
+        xl = T("점유율 →", 24, INK2).move_to([R - 0.6, B - 0.75, 0])
+        yl = T("경기당 승점 ↑", 24, INK2).move_to([L + 0.9, Tp + 0.3, 0])
+        self.play(FadeIn(grid), FadeIn(xl), FadeIn(yl), run_time=0.8)
+
+        dots = VGroup(*[Circle(radius=0.075, stroke_width=0, fill_color=BLUE if t["rank"] == 1 else "#5b6b85",
+                               fill_opacity=0.95).move_to([X(t["poss"]), Y(t["ppg"]), 0]) for t in teams])
+        self.play(LaggedStart(*[FadeIn(d, scale=0.3) for d in dots], lag_ratio=0.006), run_time=2.0)
+
+        xs = np.array([t["poss"] for t in teams]); ys = np.array([t["ppg"] for t in teams])
+        k, b = np.polyfit(xs, ys, 1)
+        line = Line([X(x0 + 3), Y(k * (x0 + 3) + b), 0], [X(x1 - 3), Y(k * (x1 - 3) + b), 0], color=AMBER, stroke_width=6)
+        self.play(Create(line), run_time=1.2)
+        badge = VGroup(T(f"r = {r:+.2f}", 44, "#0b1220", "BOLD"))
+        box = Rectangle(width=badge.width + 0.6, height=badge.height + 0.35, fill_color=AMBER, fill_opacity=1, stroke_width=0)
+        badge = VGroup(box, badge[0]).move_to([L + 2.0, Tp - 0.55, 0])
+        self.play(FadeIn(badge, shift=DOWN * 0.2), run_time=0.6)
+
+        # 대비되는 두 팀: 점유율 최고 팀 / 점유율 45% 미만 중 승점 최고 팀
+        hi = max(teams, key=lambda t: t["poss"])
+        lo = max([t for t in teams if t["poss"] < 45], key=lambda t: t["ppg"])
+        # 라벨은 원 아래쪽으로 (위쪽은 승점 상위 팀들로 붐빔), 오른쪽 끝 팀은 왼쪽으로 정렬
+        for t, col in [(hi, INK), (lo, MINT)]:
+            ring = Circle(radius=0.2, color=col, stroke_width=4).move_to([X(t["poss"]), Y(t["ppg"]), 0])
+            lab = T(f'{t["team"]}  {t["poss"]:.0f}% · {t["ppg"]:.2f}점', 24, col, "BOLD")
+            lab.next_to(ring, DOWN, buff=0.15)
+            if lab.get_right()[0] > R:
+                lab.shift(LEFT * (lab.get_right()[0] - R))
+            bg = Rectangle(width=lab.width + 0.24, height=lab.height + 0.16, fill_color="#121b2b", fill_opacity=0.85,
+                           stroke_width=0).move_to(lab)
+            self.play(Create(ring), FadeIn(bg), FadeIn(lab), run_time=0.6)
+        self.wait(2.0)
